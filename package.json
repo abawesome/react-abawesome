@@ -2,7 +2,7 @@
     "name": "react-abawesome",
     "version": "1.0.0",
     "description": "Util library for connecting to the abawesome service and running tests",
-    "author": "aleqsio",
+    "author": "abawesome",
     "license": "",
     "repository": "aleqsio/react-abawesome",
     "main": "dist/index.js",

@@ -1,0 +1,60 @@
+.abawesome_container {
+    width: 300px;
+    background: #ffffff;
+    box-shadow: 0px 0px 30px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top:20px;
+}
+.abawesome_emojiScale {
+    margin-left: -15;
+    margin-right: -15;
+}
+.abawesome_questionText {
+    font-size: 18px;
+    font-weight: 300;
+    font-family: Roboto, sans-serif;
+}
+.abawesome_button {
+    background-color: white;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 10px;
+    padding-top: 5px;
+    border: 0;
+
+    margin: 2px;
+    font-size: 30px;
+}
+.abawesome_yesnoButton {
+    flex:1;
+    padding: 10px;
+    border-radius: 10px;
+    border: 0;
+    margin: 5px;
+    font-size: 18px;
+    font-weight: 300;
+    font-family: Roboto, sans-serif;
+}
+.abawesome_yes {
+    background-color: #39FFC4;
+    
+}
+.abawesome_yes:hover {
+    background-color: rgb(49, 224, 172);
+}
+.abawesome_no {
+    background-color: #FF9797;
+    
+}
+.abawesome_no:hover {
+    background-color: rgb(233, 128, 128);
+    
+}
+.abawesome_button:hover {
+    background-color: rgb(230, 230, 230);
+}
+.abawesome_yesnoContainer {
+    display: flex;
+    flex-direction: row;
+}

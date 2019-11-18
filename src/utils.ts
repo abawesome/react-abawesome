@@ -5,4 +5,8 @@ const uuid = () => {
         return v.toString(16);
     });
 };
-export { uuid };
+
+const rand = (items: any[]) => {
+    return items[~~(items.length * Math.random())];
+}
+export { uuid, rand };

@@ -1,0 +1,14 @@
+{
+  "folders": [
+	{
+		"path": "/Users/aleksander/Projects/abawesome-react-library"
+	},
+	{
+		"path": "."
+	}
+],
+  "settings": {
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "editor.formatOnSave": true
+  }
+}

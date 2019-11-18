@@ -1,6 +1,9 @@
 import React, { useState, FunctionComponent, useEffect } from 'react';
-import { uuid } from './utils';
-
+import { uuid, rand } from './utils';
+import QuestionPopup from './QuestionPopup';
+import { QuestionHookConfig } from './useQuestion';
+// import QuestionPopup from './QuestionPopup';
+import styles from './ABProvider.css';
 interface Props {
     config: TestingConfig;
 }
@@ -14,39 +17,74 @@ export interface Answer {
 
 export interface Question {
     name: string;
+    id: string;
+    kind: 'Rating' | 'YesNo';
+}
+
+export interface DisplayedQuestion {
+    experimentId: string;
+    questionId: string;
 }
 
 export interface TestingConfig {
     projectId: string;
     userId?: string;
+    options?: {
+        maxQuestionsPerSession: number;
+    };
 }
 export interface Experiment {
-    name: string;
-    variant: { name: string };
+    id: string;
+    readableId: string;
+    questions: Question[];
+}
+
+export interface Variant {
+    id: string;
+}
+export interface Mapping {
+    experiment: Experiment;
+    variant: Variant;
 }
 export interface ABContext {
-    logEvent?: (eventId: string) => void;
+    logEvent?: (variantId: string) => (eventId: string) => void;
     logQuestionAnswer?: (questionId: string, answer: number) => void;
-    experiments: { [name: string]: Experiment };
+    showQuestion?: (experimentId: string, config?: QuestionHookConfig) => void;
+    mappings: { [experimentId: string]: Mapping };
     loading: boolean;
     error?: Error;
 }
 
 export const ABContext = React.createContext<ABContext>({
     loading: true,
-    experiments: {},
+    mappings: {},
 });
 
-const LOCALSTORAGE_USER = 'abawesome_config_userid';
-const API_URL = 'https://abawesome-rel-staging.azurewebsites.net';
-// interface Cookie {
-//     userId: string;
-// }
+let beaconString = '';
 
-const ABProvider: FunctionComponent<Props> = ({ children, config: { projectId, userId } }) => {
-    const [experiments, setExperiments] = useState<{ [id: string]: Experiment }>({}); // TODO: integrate Suspense at some point
-    const [events, setEvents] = useState<Event[]>([]);
-    const [answers, setAnswers] = useState<Answer[]>([]);
+const LOCALSTORAGE_USER = 'abawesome_config_userid';
+const API_URL = 'https://abawesome-rel-staging.azurewebsites.net'; //`http://localhost:5000`; //
+
+const ABProvider: FunctionComponent<Props> = ({ children, config: { projectId, userId, options: userOptions } }) => {
+    const options = {
+        maxQuestionsPerSession: 2,
+        ...userOptions,
+    };
+
+    const [mappings, setMappings] = useState<{ [id: string]: Mapping }>({}); // TODO: integrate Suspense at some point
+    const questions: { [id: string]: { variantId: string } & Question } = Object.values(mappings).reduce(
+        (obj, curr) => {
+            curr.experiment.questions.forEach(qst => {
+                obj[qst.id] = { ...qst, variantId: curr.variant.id };
+                return obj;
+            });
+            return obj;
+        },
+        {},
+    );
+    const [displayedQuestions, setDisplayedQuestions] = useState<string[]>([]);
+    const [events, setEvents] = useState<{ variantId: string; eventId: string }[]>([]);
+    const [answers, setAnswers] = useState<{ [questionId: string]: number }>({});
     const [sessionId, setSessionId] = useState<String | undefined>(undefined);
     const [error, setError] = useState<Error | undefined>(undefined);
     const getUserId = () => {
@@ -68,76 +106,82 @@ const ABProvider: FunctionComponent<Props> = ({ children, config: { projectId, u
         })
             .then(response => response.json())
             .then(data => {
-                if (!data.experiments) {
-                    setError(new Error(JSON.stringify(data.errors)));
+                if (!data) {
+                    setError(new Error(JSON.stringify(data)));
                     return;
                 }
-                setExperiments(
-                    data.experiments.reduce((obj: {}, item: { experiment: string }) => {
-                        obj[item.experiment] = item;
+                setMappings(
+                    data.reduce((obj: {}, item: { experiment: { id: string } }) => {
+                        obj[item.experiment.id] = item;
                         return obj;
-                    }, []),
+                    }, {}),
                 );
+
                 setSessionId(data.sessionId);
             })
             .catch(error => setError(error));
-        window.onbeforeunload = uploadConversion;
+        window.addEventListener('unload', () => uploadConversion(), false);
         return uploadConversion;
-    }, [projectId, setError, setExperiments, setSessionId]);
-
+    }, [projectId, setError, setMappings, setSessionId]);
+    beaconString = JSON.stringify({
+        events: events.map(e => ({ ...e, count: 1 })), //TODO: Make sure auto events not being triggered multiple times
+        answers: Object.entries(answers).map(([k, v]) => ({
+            questionId: k,
+            variantId: questions[k].variantId,
+            answer: v,
+        })),
+    });
     const uploadConversion = () => {
-        fetch(`${API_URL}/project/${projectId}/log`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                session_id: sessionId,
-                visitor_id: getUserId(),
-                events: events,
-            }),
-        }).catch(error => console.error(error));
+        let headers = {
+            type: 'text/plain',
+        };
+        console.log({ beaconString });
+        let blob = new Blob([beaconString], headers);
+        navigator.sendBeacon(`${API_URL}/project/${projectId}/log`, blob);
     };
 
-    const logEvent = (eventName: string) => {
-        setEvents([...events, { name: eventName }]);
-        // this.setState({
-        //     logItems: this.state.logItems.concat([
-        //         {
-        //             type: type === 'built-in' ? 'built-in' : 'custom',
-        //             name: eventName,
-        //             time: Math.round(performance.now()),
-        //         },
-        //     ]),
-        // });
+    const logEvent = (variantId: string) => (eventId: string) => {
+        console.log({ test: events });
+        setEvents([...events, { variantId, eventId }]);
     };
 
-    const logQuestionAnswer = (eventName: string) => {
-        setAnswers([...answers, { name: eventName }]);
-        // this.setState({
-        //     logItems: this.state.logItems.concat([
-        //         {
-        //             type: type === 'built-in' ? 'built-in' : 'custom',
-        //             name: eventName,
-        //             time: Math.round(performance.now()),
-        //         },
-        //     ]),
-        // });
-    };
+    const logQuestionAnswer = (questionId: string) => (answer: number) =>
+        setAnswers({ ...answers, [questionId]: answer });
 
-    // const { children } = this.props;
-    // const { experiments, loading } = this.state;
+    const showQuestion = (experimentId: string, config?: QuestionHookConfig) => {
+        if (!(mappings[experimentId] && displayedQuestions.length < options.maxQuestionsPerSession)) return;
+        const questionToAsk: Question | undefined =
+            config && config.id
+                ? questions[config.id]
+                : rand(mappings[experimentId].experiment.questions.filter(q => !displayedQuestions.includes(q.id)));
+        if (!questionToAsk) return;
+        setDisplayedQuestions([...displayedQuestions, questionToAsk.id]);
+    };
     return (
         <>
             <ABContext.Provider
                 value={{
-                    experiments,
+                    mappings,
                     logEvent: logEvent,
-                    logQuestionAnswer: logQuestionAnswer,
-                    loading: !error && Object.keys(experiments).length === 0,
+                    loading: !error && !!sessionId,
+                    showQuestion,
                     error,
                 }}
             >
+                <div className={styles.abawesomeListContainer}>
+                    {displayedQuestions.filter(qId => answers[qId] === undefined).reverse().map(qId => {
+                        const question = questions[qId];
+                        if (!question) return null;
+                        return (
+                            <QuestionPopup
+                                onAnswer={logQuestionAnswer(question.id)}
+                                type={question.kind}
+                                questionText={question.name}
+                            />
+                        );
+                    })}
+                </div>
+
                 {children}
             </ABContext.Provider>
         </>
