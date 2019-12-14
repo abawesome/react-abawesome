@@ -37,6 +37,7 @@ export interface Experiment {
     id: string;
     readableId: string;
     questions: Question[];
+    variantDisplayedEventId: string;
 }
 
 export interface Variant {
@@ -63,7 +64,7 @@ export const ABContext = React.createContext<ABContext>({
 let beaconString = '';
 
 const LOCALSTORAGE_USER = 'abawesome_config_userid';
-const API_URL = 'https://abawesome-rel-staging.azurewebsites.net'; //`http://localhost:5000`; //
+const API_URL = 'https://api.abaweso.me';
 
 const ABProvider: FunctionComponent<Props> = ({ children, config: { projectId, userId, options: userOptions } }) => {
     const options = {
@@ -106,8 +107,8 @@ const ABProvider: FunctionComponent<Props> = ({ children, config: { projectId, u
         })
             .then(response => response.json())
             .then(data => {
-                if (!data) {
-                    setError(new Error(JSON.stringify(data)));
+                if (data === projectId) {
+                    setError(new Error("Project not found"));
                     return;
                 }
                 setMappings(
@@ -141,7 +142,6 @@ const ABProvider: FunctionComponent<Props> = ({ children, config: { projectId, u
     };
 
     const logEvent = (variantId: string) => (eventId: string) => {
-        console.log({ test: events });
         setEvents([...events, { variantId, eventId }]);
     };
 

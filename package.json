@@ -1,10 +1,10 @@
 {
     "name": "react-abawesome",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Util library for connecting to the abawesome service and running tests",
     "author": "abawesome",
-    "license": "",
-    "repository": "aleqsio/react-abawesome",
+    "license": "BSD-3-Clause",
+    "repository": "abawesome/react-abawesome",
     "main": "dist/index.js",
     "module": "dist/index.es.js",
     "jsnext:main": "dist/index.es.js",
